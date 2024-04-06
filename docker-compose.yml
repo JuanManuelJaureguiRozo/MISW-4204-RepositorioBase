@@ -1,0 +1,37 @@
+version: '3'
+networks:
+    app_net:
+      driver: bridge
+    user_net:
+      driver: bridge
+services:
+  users:
+    build: ./users
+    ports:
+      - "3000:3000"
+    environment:
+      DB_NAME: monitor_users
+      DB_HOST: users_db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      FLASK_APP: ./src/main.py
+    depends_on:
+      users_db:
+        condition: service_healthy
+    networks:
+      - app_net
+      - user_net
+  users_db:
+    image: postgres
+    environment:
+      POSTGRES_DB: monitor_users
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+    networks:
+      - user_net
