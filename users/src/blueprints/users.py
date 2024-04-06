@@ -15,12 +15,6 @@ def create():
     return jsonify(user), 201
 
 
-@users_blueprint.route('/api/users/<id>', methods=['PATCH'])
-def update(id):
-    response = UpdateUser(id, request.get_json()).execute()
-    return jsonify(response)
-
-
 @users_blueprint.route('/api/auth/login', methods=['POST'])
 def auth():
     user = GenerateToken(request.get_json()).execute()
