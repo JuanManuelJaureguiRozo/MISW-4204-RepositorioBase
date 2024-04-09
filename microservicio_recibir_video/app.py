@@ -9,13 +9,8 @@ app = create_app('default')
 app_context = app.app_context()
 app_context.push()
 
-# db.init_app(app)
-# db.create_all()
-
-# db = create_db(app)
-
 cors = CORS(app)
 
 api = Api(app)
-api.add_resource(VideoComandsResource, '/videos')
-api.add_resource(VideoQueriesResource, '/videos', '/videos/<int:id>')
+api.add_resource(VideoComandsResource, '/videos', '/videos/<int:id>')
+api.add_resource(VideoQueriesResource, '/videos')

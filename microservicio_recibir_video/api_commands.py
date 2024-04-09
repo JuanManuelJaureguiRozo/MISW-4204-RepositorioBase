@@ -33,12 +33,17 @@ class VideoComandsResource(Resource):
     
         session.add(nuevo_video)
         session.commit()
-        args = (vfile_name, vtimestamp, vstatus, voriginal, vedited)
+        args = (nuevo_video.id,nuevo_video.file_name, nuevo_video.timestamp, vstatus, nuevo_video.original, nuevo_video.edited)
         upload_video.apply_async(args=args, queue='logs')
         return video_schema.dump(nuevo_video), 201
     
+    
     def put(self, id):
-        video = session.query(Video).get_or_404(id)
+        video = session.query(Video).get(id)
+
+        if video is None:
+            return '', 404
+
         video.status = request.json['status']
         video.original = request.json['original']
         video.edited = request.json['edited']
@@ -46,7 +51,11 @@ class VideoComandsResource(Resource):
         return video_schema.dump(video), 200
 
     def delete(self, id):
-        video = session.query(Video).get_or_404(id)
+        video = session.query(Video).get(id)
+
+        if video is None:
+            return '', 404
+
         session.delete(video)
         session.commit()
         return '', 204
