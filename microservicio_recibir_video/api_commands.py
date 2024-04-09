@@ -3,7 +3,7 @@ from .modelos import db, Video, VideoSchema
 from flask import request
 # from flask_jwt_extended import jwt_required, create_access_token
 from celery import Celery
-from datetime import datetime
+from sqlalchemy.orm import sessionmaker
 
 celery_app = Celery(__name__, broker='redis://localhost:6379/0')
 
@@ -12,31 +12,41 @@ def upload_video(*args):
     pass
 
 video_schema = VideoSchema()
+Session = sessionmaker(bind=db)
+session = Session()
 
 class VideoComandsResource(Resource):
     def post(self):
-        print(request)
-        print('prueba')
-        file_name = request.form['file_name']
-        timestamp = request.form['timestap']
-        status = request.form['status']
-        original = None
-        edited = None
-        video = Video(file_name=file_name, timestamp=timestamp, status=status, original=original, edited=edited)
-        args = (file_name, timestamp, status, original, edited)
+        vfile_name = request.json['file_name']
+        vtimestamp = request.json['timestap']
+        vstatus = request.json['status']
+        voriginal = None
+        vedited = None
+        
+        nuevo_video = Video(
+            file_name = vfile_name,
+            timestamp = vtimestamp,
+            status = vstatus,
+            original = voriginal,
+            edited = vedited
+        )
+    
+        session.add(nuevo_video)
+        session.commit()
+        args = (vfile_name, vtimestamp, vstatus, voriginal, vedited)
         upload_video.apply_async(args=args, queue='logs')
-        db.session.add(video)
-        db.session.commit()
-        return video_schema.dump(video), 201
+        return video_schema.dump(nuevo_video), 201
     
     def put(self, id):
-        video = Video.query.get_or_404(id)
+        video = session.query(Video).get_or_404(id)
         video.status = request.json['status']
-        db.session.commit()
+        video.original = request.json['original']
+        video.edited = request.json['edited']
+        session.commit()
         return video_schema.dump(video), 200
 
     def delete(self, id):
-        video = Video.query.get_or_404(id)
-        db.session.delete(video)
-        db.session.commit()
+        video = session.query(Video).get_or_404(id)
+        session.delete(video)
+        session.commit()
         return '', 204

@@ -21,16 +21,6 @@ class Estado(enum.Enum):
     EDITADO = 2
     PROCESADO = 3
 
-Video2 = Table(
-    'video', MetaData(),
-    Column('id', Integer, primary_key=True),
-    Column('file_name', String(128), nullable=False),
-    Column('timestamp', String(50), nullable=False),
-    Column('status', Enum(Estado), nullable=False),
-    Column('original', String(128)),
-    Column('edited', String(128))
-)
-
 class Video(Base):
     __tablename__ = 'video'
     id = Column(Integer, primary_key=True)
