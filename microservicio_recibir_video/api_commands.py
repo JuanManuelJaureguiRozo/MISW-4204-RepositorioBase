@@ -18,6 +18,7 @@ session = Session()
 class VideoComandsResource(Resource):
     def post(self):
         vfile_name = request.json['file_name']
+        vfile = request.json['file']
         vtimestamp = request.json['timestap']
         vstatus = request.json['status']
         voriginal = None
@@ -33,7 +34,7 @@ class VideoComandsResource(Resource):
     
         session.add(nuevo_video)
         session.commit()
-        args = (nuevo_video.id,nuevo_video.file_name, nuevo_video.timestamp, vstatus, nuevo_video.original, nuevo_video.edited)
+        args = (nuevo_video.id,nuevo_video.file_name,vfile,nuevo_video.timestamp, vstatus, nuevo_video.original, nuevo_video.edited)
         upload_video.apply_async(args=args, queue='logs')
         return video_schema.dump(nuevo_video), 201
     
