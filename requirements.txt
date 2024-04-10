@@ -1,0 +1,13 @@
+flask
+Flask-RESTful
+flask_sqlalchemy
+flask_marshmallow
+flask_restful
+flask_cors
+SQLAlchemy
+marshmallow-sqlalchemy
+celery
+redis
+flask_jwt_extended
+psycopg2
+psycopg3
