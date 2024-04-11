@@ -10,3 +10,12 @@ class VideoQueriesResource(Resource):
     def get(self):
         videos = session.query(Video).all()
         return video_schema.dump(videos, many=True), 200
+    
+class VideoQueryResource(Resource):
+    def get(self, id):
+        video = session.query(Video).get(id)
+        
+        if video is None:
+            return '', 404
+        
+        return video_schema.dump(video), 200
