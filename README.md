@@ -30,6 +30,7 @@ flask run -p 5001
 ```bash
 celery -A app.celery_app  worker -l info -P solo -Q logs
 ```
+4. En el archivo config.ini encontrará el parametro "file_upload_dir" donde podrá configurar la ruta de guardado del los vídeos originales y editados
 
 Finalmente, a continuación se comparte enlace a la colección de request para usar desde postman y el script de creación de la tabla en la base de datos IDRL
 https://uniandes.sharepoint.com/:f:/s/Desarrollodesoftwareenlanube397/Eh6Do18KnSROteatsJxahYsBM8ZLgB_belb-mTnm3mukEw?e=1mDlOs
