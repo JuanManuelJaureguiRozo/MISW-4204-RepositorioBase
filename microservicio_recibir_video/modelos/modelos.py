@@ -15,10 +15,9 @@ except Exception as ex:
     print(f'Sorry failed to connect: {ex}')
 
 class Estado(enum.Enum):
+    PENDIENTE = 0
     CREADO = 1
-    PENDIENTE = 2
     SUBIDO = 2
-    EDITADO = 2
     PROCESADO = 3
 
 class Video(Base):

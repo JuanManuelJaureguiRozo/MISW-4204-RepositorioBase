@@ -26,8 +26,8 @@ Session = sessionmaker(bind=db)
 session = Session()
 
 celery_app = Celery(__name__, broker='redis://localhost:6379/0')
-@celery_app.task(name='upload_video')
-def upload_video(*args):
+@celery_app.task(name='edit_video')
+def edit_video(*args):
     with app.app_context():
         video_schema = VideoSchema()
         print(args)
@@ -37,12 +37,12 @@ def upload_video(*args):
             return '', 404
 
         file_name = args[1]
-        file_dir = file_upload_dir + "\\" + file_name
+        file_dir = file_upload_dir + "\\" + "edited_" + file_name
         fh = open(file_dir, "wb")
         fh.write(base64.b64decode(args[2]))
         fh.close()
 
-        video.status = "SUBIDO"
-        video.original = file_dir
+        video.status = "PROCESADO"
+        video.edited = file_dir
         session.commit()
         return video_schema.dump(video), 200

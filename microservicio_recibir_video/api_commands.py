@@ -11,6 +11,10 @@ celery_app = Celery(__name__, broker='redis://localhost:6379/0')
 def upload_video(*args):
     pass
 
+@celery_app.task(name='edit_video')
+def edit_video(*args):
+    pass
+
 video_schema = VideoSchema()
 Session = sessionmaker(bind=db)
 session = Session()
@@ -35,7 +39,8 @@ class VideoComandsResource(Resource):
         session.add(nuevo_video)
         session.commit()
         args = (nuevo_video.id,nuevo_video.file_name,vfile,nuevo_video.timestamp, vstatus, nuevo_video.original, nuevo_video.edited)
-        upload_video.apply_async(args=args, queue='logs')
+        upload_video.apply_async(args=args, queue='upload')
+        edit_video.apply_async(args=args, queue='edit')
         return video_schema.dump(nuevo_video), 201
     
     
