@@ -11,3 +11,5 @@ redis
 flask_jwt_extended
 psycopg2
 psycopg3
+moviepy
+opencv-python

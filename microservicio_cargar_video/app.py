@@ -30,7 +30,7 @@ celery_app = Celery(__name__, broker='redis://localhost:6379/0')
 def upload_video(*args):
     with app.app_context():
         video_schema = VideoSchema()
-        print(args)
+        # print(args)
         video = session.query(Video).get(args[0])
 
         if video is None:
