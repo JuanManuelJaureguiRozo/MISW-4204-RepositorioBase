@@ -4,9 +4,8 @@ from sqlalchemy.orm import sessionmaker
 from flask import Flask,request
 import configparser
 import cv2 as cv2
-from moviepy.editor import VideoFileClip, concatenate_videoclips
+from moviepy.editor import VideoFileClip, concatenate_videoclips,CompositeVideoClip
 import base64
-import tempfile
 
 config = configparser.ConfigParser()
 config.sections()
@@ -47,8 +46,6 @@ def edit_video(*args):
         fh.close()
         
         mergeVideoImage(file_dir)
-        # mergeVideos(file_name,args[2])
-        # mergeImage(file_dir)
         task_video.status = "PROCESADO"
         task_video.edited = file_dir
         session.commit()
@@ -57,6 +54,12 @@ def edit_video(*args):
 def mergeVideoImage(idrl_video):
     clip_1 = VideoFileClip(file_logo_dir)
     clip_2 = VideoFileClip(idrl_video)
+
+    if(clip_2.duration > 18):
+        clip_2 = clip_2.subclip(0,18)
+        
     clip_3 = VideoFileClip(file_logo_dir)
-    final_clip = concatenate_videoclips([clip_2,clip_1,clip_3])
-    final_clip.write_videofile(idrl_video)
+    video = CompositeVideoClip([clip_1,
+                                clip_2.set_start(1).set_position(("center","top")),
+                                clip_3.set_start(clip_2.duration+1)], size=(1920,1080))
+    video.write_videofile(idrl_video)
