@@ -1,15 +1,11 @@
 version: '3'
+
 networks:
-    app_net:
-      driver: bridge
-    usuario_net:
-      driver: bridge
-    # video_net:
-    #   driver: bridge
-    # edicion_net:
-    #   driver: bridge
-    # transferencia_net:
-    #   driver: bridge
+  app_net:
+    driver: bridge
+  videos_net:
+    driver: bridge
+
 services:
   usuarios:
     build: ./usuarios
@@ -23,11 +19,10 @@ services:
       DB_PASSWORD: postgres
       FLASK_APP: ./src/main.py
     depends_on:
-      usuarios_db:
-        condition: service_healthy
+      - usuarios_db
     networks:
       - app_net
-      - usuario_net
+
   usuarios_db:
     image: postgres
     environment:
@@ -40,94 +35,4 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - usuario_net
-  # videos:
-  #   build: ./videos
-  #   ports:
-  #     - "3001:3000"
-  #   environment:
-  #     DB_NAME: monitor_videos
-  #     DB_HOST: videos_db
-  #     DB_PORT: 5432
-  #     DB_USER: postgres
-  #     DB_PASSWORD: postgres
-  #     FLASK_APP: ./src/main.py
-  #   depends_on:
-  #     videos_db:
-  #       condition: service_healthy
-  #   networks:
-  #     - app_net
-  #     - video_net
-  # videos_db:
-  #   image: postgres
-  #   environment:
-  #     POSTGRES_DB: monitor_videos
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
-  #     interval: 2s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - video_net
-  # ediciones:
-  #   build: ./ediciones
-  #   ports:
-  #     - "3002:3000"
-  #   environment:
-  #     DB_NAME: monitor_ediciones
-  #     DB_HOST: ediciones_db
-  #     DB_PORT: 5432
-  #     DB_USER: postgres
-  #     DB_PASSWORD: postgres
-  #     FLASK_APP: ./src/main.py
-  #   depends_on:
-  #     ediciones_db:
-  #       condition: service_healthy
-  #   networks:
-  #     - app_net
-  #     - edicion_net
-  # ediciones_db:
-  #   image: postgres
-  #   environment:
-  #     POSTGRES_DB: monitor_ediciones
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
-  #     interval: 2s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - edicion_net
-  # transferencias:
-  #   build: ./transferencias
-  #   ports:
-  #     - "3003:3000"
-  #   environment:
-  #     DB_NAME: monitor_transferencias
-  #     DB_HOST: transferencias_db
-  #     DB_PORT: 5432
-  #     DB_USER: postgres
-  #     DB_PASSWORD: postgres
-  #     FLASK_APP: ./src/main.py
-  #   depends_on:
-  #     transferencias_db:
-  #       condition: service_healthy
-  #   networks:
-  #     - app_net
-  #     - transferencia_net
-  # transferencias_db:
-  #   image: postgres
-  #   environment:
-  #     POSTGRES_DB: monitor_transferencias
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
-  #     interval: 2s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - transferencia_net
+      - app_net
