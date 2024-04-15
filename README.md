@@ -39,7 +39,7 @@ py -m pip install psycopg2
 2. Ubicarse en el microservicio microservicio_recibir_video y ejecutarlo
 
 ```bash
-flask run -p 5001
+flask run -p 3001
 ```
 
 3. Ubicarse en el microservicio microservicio_cargar_video y subir Celery que ejecutará la cola "upload" que corresponde al proceso en batch para la carga del vídeo en repositorio
