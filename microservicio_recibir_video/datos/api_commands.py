@@ -1,5 +1,5 @@
 from flask_restful import Resource
-from .modelos import db, Video, VideoSchema
+from modelos import db, Video, VideoSchema
 from flask import request
 # from flask_jwt_extended import jwt_required, create_access_token
 from celery import Celery

@@ -1,10 +1,10 @@
-from microservicio_recibir_video import create_app, create_db
-from .modelos import db
+from datos import create_app, create_db
+from modelos import db
 from flask_restful import Api
 from flask_cors import CORS
-from .api_commands import VideoComandsResource
-from .api_queries import VideoQueriesResource
-from .api_queries import VideoQueryResource
+from datos.api_commands import VideoComandsResource
+from datos.api_queries import VideoQueriesResource
+from datos.api_queries import VideoQueryResource
 
 app = create_app('default')
 app_context = app.app_context()

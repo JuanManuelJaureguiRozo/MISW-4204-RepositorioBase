@@ -1,4 +1,4 @@
-from .modelos import db, Video, VideoSchema
+from modelos import db, Video, VideoSchema
 from flask_restful import Resource
 from sqlalchemy.orm import sessionmaker
 

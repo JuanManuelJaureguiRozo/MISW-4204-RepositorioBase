@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine, Column, Integer, String, Enum, Table, MetaData
-from microservicio_recibir_video import create_db
+from datos import create_db
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow import fields
 from sqlalchemy.ext.declarative import declarative_base
