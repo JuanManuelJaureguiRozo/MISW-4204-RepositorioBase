@@ -4,17 +4,21 @@ from sqlalchemy.orm import sessionmaker
 from flask import Flask,request
 import configparser
 import base64
+# gcloud
+from google.cloud import storage
+
 
 config = configparser.ConfigParser()
 config.sections()
 config.read('config.ini')
 
 file_upload_dir = config['Paths']['file_upload_dir']
+bucket_name = 'almacenamiento_videos_e3'
 
 # Crear la aplicación
 def create_app(config_name):
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@localhost:5432/IDRL'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgresql@localhost:5432/IDRL'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     return app
 
@@ -37,12 +41,36 @@ def upload_video(*args):
             return '', 404
 
         file_name = args[1]
-        file_dir = file_upload_dir + "\\" + file_name
-        fh = open(file_dir, "wb")
-        fh.write(base64.b64decode(args[2]))
-        fh.close()
+        file = base64.b64decode(args[2])
+        write_on_bucket(file_name, file)
+        file_dir = "gs://almacenamiento_videos_e3/videos_originales" + "/" + file_name
+        # file_dir = file_upload_dir + "\\" + file_name
+        # fh = open(file_dir, "wb")
+        # fh.write(base64.b64decode(args[2]))
+        # fh.close()
 
         video.status = "SUBIDO"
         video.original = file_dir
         session.commit()
         return video_schema.dump(video), 200
+    
+def write_on_bucket(blob_name,blob_object):
+    """Write and read a blob from GCS using file-like IO"""
+    # The ID of your GCS bucket
+    # bucket_name = "your-bucket-name"
+
+    # The ID of your new GCS object
+    # blob_name = "storage-object-name"
+
+    storage_client = storage.Client.from_service_account_json('service_account.json')
+
+    bucket = storage_client.bucket(bucket_name)
+    file = bucket.blob("gs://almacenamiento_videos_e3/videos_originales/" + blob_name)
+    file.upload_from_string(blob_object, content_type='video/mp4')
+    file.make_public()
+    # blob = bucket.blob(blob_name)
+
+    # Mode can be specified as wb/rb for bytes mode.
+    # See: https://docs.python.org/3/library/io.html
+    #with blob.open("w") as f:
+    #    f.write(blob_object)
