@@ -13,8 +13,9 @@ config.sections()
 config.read('config.ini')
 
 file_upload_dir = config['Paths']['file_upload_dir']
-bucket_name = 'almacenamiento_videos_e3'
-path_file = "videos_originales/"
+bucket_name = config['Paths']['bucket_name']
+path_file = config['Paths']['path_file']
+service_account = config['Paths']['service_account']
 
 # Crear la aplicación
 def create_app(config_name):
@@ -44,7 +45,6 @@ def upload_video(*args):
         file_name = args[1]
         file = base64.b64decode(args[2])
         upload_blob_from_memory(file, file_name)
-        # write_on_bucket(file_name, file)
         file_dir = "gs://almacenamiento_videos_e3/videos_originales" + "/" + file_name
         # file_dir = file_upload_dir + "\\" + file_name
         # fh = open(file_dir, "wb")
@@ -55,41 +55,12 @@ def upload_video(*args):
         video.original = file_dir
         session.commit()
         return video_schema.dump(video), 200
-    
-def write_on_bucket(blob_name,blob_object):
-    """Write and read a blob from GCS using file-like IO"""
-    # The ID of your GCS bucket
-    # bucket_name = "your-bucket-name"
 
-    # The ID of your new GCS object
-    # blob_name = "storage-object-name"
-
-    storage_client = storage.Client.from_service_account_json('service_account.json')
-
-    bucket = storage_client.bucket(bucket_name)
-    file = bucket.blob("videos_originales\\" + blob_name)
-    file.upload_from_string(blob_object, content_type='video/mp4')
-    file.make_public()
-    # blob = bucket.blob(blob_name)
-
-    # Mode can be specified as wb/rb for bytes mode.
-    # See: https://docs.python.org/3/library/io.html
-    #with blob.open("w") as f:
-    #    f.write(blob_object)
 
 def upload_blob_from_memory(contents, destination_blob_name):
     """Uploads a file to the bucket."""
-
-    # The ID of your GCS bucket
-    # bucket_name = "your-bucket-name"
-
-    # The contents to upload to the file
-    # contents = "these are my contents"
-
-    # The ID of your GCS object
-    # destination_blob_name = "storage-object-name"
     destination_blob_name = path_file + destination_blob_name
-    storage_client = storage.Client.from_service_account_json('C:/Users/PERSONAL/Documents/Proyectos_UniAndes/service_account.json')
+    storage_client = storage.Client.from_service_account_json(service_account)
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
 
