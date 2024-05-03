@@ -14,6 +14,7 @@ config.read('config.ini')
 
 file_upload_dir = config['Paths']['file_upload_dir']
 bucket_name = 'almacenamiento_videos_e3'
+path_file = "videos_originales/"
 
 # Crear la aplicación
 def create_app(config_name):
@@ -42,7 +43,8 @@ def upload_video(*args):
 
         file_name = args[1]
         file = base64.b64decode(args[2])
-        write_on_bucket(file_name, file)
+        upload_blob_from_memory(file, file_name)
+        # write_on_bucket(file_name, file)
         file_dir = "gs://almacenamiento_videos_e3/videos_originales" + "/" + file_name
         # file_dir = file_upload_dir + "\\" + file_name
         # fh = open(file_dir, "wb")
@@ -65,7 +67,7 @@ def write_on_bucket(blob_name,blob_object):
     storage_client = storage.Client.from_service_account_json('service_account.json')
 
     bucket = storage_client.bucket(bucket_name)
-    file = bucket.blob("gs://almacenamiento_videos_e3/videos_originales/" + blob_name)
+    file = bucket.blob("videos_originales\\" + blob_name)
     file.upload_from_string(blob_object, content_type='video/mp4')
     file.make_public()
     # blob = bucket.blob(blob_name)
@@ -74,3 +76,25 @@ def write_on_bucket(blob_name,blob_object):
     # See: https://docs.python.org/3/library/io.html
     #with blob.open("w") as f:
     #    f.write(blob_object)
+
+def upload_blob_from_memory(contents, destination_blob_name):
+    """Uploads a file to the bucket."""
+
+    # The ID of your GCS bucket
+    # bucket_name = "your-bucket-name"
+
+    # The contents to upload to the file
+    # contents = "these are my contents"
+
+    # The ID of your GCS object
+    # destination_blob_name = "storage-object-name"
+    destination_blob_name = path_file + destination_blob_name
+    storage_client = storage.Client.from_service_account_json('C:/Users/PERSONAL/Documents/Proyectos_UniAndes/service_account.json')
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+
+    blob.upload_from_string(contents, content_type='video/mp4')
+
+    print(
+        f"{destination_blob_name} uploaded to {bucket_name}."
+    )
