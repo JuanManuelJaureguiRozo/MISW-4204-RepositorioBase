@@ -16,11 +16,16 @@ file_upload_dir = config['Paths']['file_upload_dir']
 bucket_name = config['Paths']['bucket_name']
 path_file = config['Paths']['path_file']
 service_account = config['Paths']['service_account']
+db_user = config['credentials']['db_user']
+db_password = config['credentials']['db_password']
+db_host = config['credentials']['db_host']
+db_port = config['credentials']['db_port']
+db_database = config['credentials']['db_database']
 
 # Crear la aplicación
 def create_app(config_name):
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgresql@localhost:5432/IDRL'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://'+ db_user +':'+ db_password +'@'+ db_host +':'+ db_port +'/' + db_database
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     return app
 
@@ -45,11 +50,7 @@ def upload_video(*args):
         file_name = args[1]
         file = base64.b64decode(args[2])
         upload_blob_from_memory(file, file_name)
-        file_dir = "gs://almacenamiento_videos_e3/videos_originales" + "/" + file_name
-        # file_dir = file_upload_dir + "\\" + file_name
-        # fh = open(file_dir, "wb")
-        # fh.write(base64.b64decode(args[2]))
-        # fh.close()
+        file_dir = "https://storage.cloud.google.com/almacenamiento_videos_e3/videos_originales/" + file_name
 
         video.status = "SUBIDO"
         video.original = file_dir

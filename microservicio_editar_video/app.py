@@ -18,11 +18,16 @@ file_logo_dir = config['Paths']['file_logo_dir']
 bucket_name = config['Paths']['bucket_name']
 path_file = config['Paths']['path_file']
 service_account = config['Paths']['service_account']
+db_user = config['credentials']['db_user']
+db_password = config['credentials']['db_password']
+db_host = config['credentials']['db_host']
+db_port = config['credentials']['db_port']
+db_database = config['credentials']['db_database']
 
 # Crear la aplicación
 def create_app(config_name):
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@localhost:5432/IDRL'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://'+ db_user +':'+ db_password +'@'+ db_host +':'+ db_port +'/' + db_database
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     return app
 
@@ -45,13 +50,15 @@ def edit_video(*args):
             return '', 404
 
         file_name = args[1]
-        file_dir = file_upload_dir + "\\" + "edited_" + file_name
+        file_name = "edited_" + file_name
+        file_dir = file_upload_dir + "\\" + file_name
         fh = open(file_dir, "wb")
         fh.write(base64.b64decode(args[2]))
         fh.close()
 
         mergeVideoImage(file_dir)
-        upload_blob_from_memory(file_dir, "edited_" + file_name)
+        upload_blob_from_memory(file_dir, file_name)
+        file_dir = "https://storage.cloud.google.com/almacenamiento_videos_e3/videos_procesados/" + file_name
         task_video.status = "PROCESADO"
         task_video.edited = file_dir
         session.commit()
