@@ -3,10 +3,21 @@ from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow import fields
 from sqlalchemy.ext.declarative import declarative_base
 import enum
+import configparser
+
+config = configparser.ConfigParser()
+config.sections()
+config.read('config.ini')
+
+db_user = config['credentials']['db_user']
+db_password = config['credentials']['db_password']
+db_host = config['credentials']['db_host']
+db_port = config['credentials']['db_port']
+db_database = config['credentials']['db_database']
 
 # Crear la base de datos
 def create_db():
-    conection_string = 'postgresql+psycopg2://{}:{}@{}:{}/{}?client_encoding=utf-8'.format("postgres", "postgresql", "localhost", "5432", "IDRL")
+    conection_string = 'postgresql+psycopg2://{}:{}@{}:{}/{}?client_encoding=utf-8'.format(db_user, db_password, db_host, db_port,db_database)
     db = create_engine(conection_string)
     return db
 
