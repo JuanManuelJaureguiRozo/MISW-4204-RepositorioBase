@@ -5,7 +5,7 @@ from flask import request
 from celery import Celery
 from sqlalchemy.orm import sessionmaker
 
-celery_app = Celery(__name__, broker='redis://127.0.0.1:6379/0')
+celery_app = Celery(__name__, broker='redis://35.233.157.154:6379/0')
 
 @celery_app.task(name='upload_video')
 def upload_video(*args):
