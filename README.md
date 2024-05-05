@@ -41,48 +41,58 @@ https://uniandes.sharepoint.com/:f:/s/Desarrollodesoftwareenlanube397/Eh6Do18KnS
 
 # **Despliegue en la nube haciendo de Buckets**
 
-Para realizar el despliegue en la nube haciendo uso de balanceador de cargas y autoscalling realizamos el proceso inicial de configurar una VM con el servicio de modo tal que pudieramos hacer uso de su dico como imagen para que un grupo de instancias pudiera escalar de accuerdo a los criterios definidos, ahora bien, antes de intentar ejecutar los microservicios es recomendable instalar las diferentes librerías utilizadas en la aplicación, para ellos ubiquese en la raíz del repositorio MISW-4204-RepositorioBas donde encontrará el archivo "requirements.txt" y ejecute la instrucción:
+1. Para realizar el despliegue en la nube haciendo uso de balanceador de cargas y autoscalling realizamos el proceso inicial de configurar una VM con el servicio de modo tal que pudieramos hacer uso de su dico como imagen para que un grupo de instancias pudiera escalar de accuerdo a los criterios definidos, ahora bien, antes de intentar ejecutar los microservicios es recomendable instalar las diferentes librerías utilizadas en la aplicación, para ellos ubiquese en la raíz del repositorio MISW-4204-RepositorioBas donde encontrará el archivo "requirements.txt" y ejecute la instrucción:
 ```bash
 sudo python3 -m pip install -r requirements.txt
 ```
 
-Para el caso de sudo pip install psycopg2 se debe realizar su instalación de manera independiente ya que generaba error dentro de los requeriments.
+2. Para el caso de sudo pip install psycopg2 se debe realizar su instalación de manera independiente ya que generaba error dentro de los requeriments.
 ```bash
 sudo pip install psycopg2-binary
 ```
 
-En caso de presentar error con alguna librería en particular recuerde ejecutar su instalación
+3. En caso de presentar error con alguna librería en particular recuerde ejecutar su instalación
 ```bash
 sudo pip install opencv-python
 sudo pip install redis
 ```
 
-Recuerde realizar la configuración correspondiente en los archivo config.ini de cada microservicio con el objetivo de configurar credenciales de conexión a la instancia de base de datos, informacción del bucket y path definidos para guardar los vídeos.
+4. Recuerde realizar la configuración correspondiente en los archivo config.ini de cada microservicio con el objetivo de configurar credenciales de conexión a la instancia de base de datos, informacción del bucket y path definidos para guardar los vídeos.
 
-Instale gunicorn para exponer el servicio web-server externamente
+5. Instale gunicorn para exponer el servicio web-server externamente
 ```bash
 sudo pip install gunicorn
 ```
 
-Hicimos uso del puerto 5000 en caso de requerir habilitar o permitir trafico por un puerto en particular instale ufw y haga uso del comando
+6. Hicimos uso del puerto 5000 en caso de requerir habilitar o permitir trafico por un puerto en particular instale ufw y haga uso del comando
 ```bash
 sudo apt install ufw
 sudo ufw allow 5000
 ```
 
-Para crear la aplicación como servicio con el objetivo de mantenerlo en ejecución instale la utilidad pm2
+7. Para crear la aplicación como servicio con el objetivo de mantenerlo en ejecución instale la utilidad pm2
 ```bash
 sudo npm install pm2@latest -g
 ```
 
-En este punto para establecer la aplicación web-server (microservicio recibirVideo) ubiquese en la carpeta microservicio_recibir_video y ejecute el comando
+8. De ser necesario modifique el archivo microservicio_recibir_video/datos/api_commands.py con la IP del servidor de Redis para la creación de las tareas a procesar por los microservicio cargarVideo y editarVideo.
+
+9. Para establecer la aplicación web-server (microservicio recibirVideo) ubiquese en la carpeta microservicio_recibir_video y ejecute el comando
 ```bash
 pm2 start "sudo gunicorn --bind 0.0.0.0:5000 app:app" --name web-server
 ```
 
-En este punto tomamos la instancia acondicionada actual para hacer uso de su disco en la creación de la imagen que permitirá crear la plantilla para el grupo de servicios que escalará esta capa de la aplicación
+10. En este punto tomamos la instancia acondicionada actual para hacer uso de su disco en la creación de la imagen que permitirá crear la plantilla para el grupo de servicios que escalará esta capa de la aplicación
 
-Ahora, para los microservicios que ejecutan procesos en batch luego de seguir
+11. Ahora, para los microservicios que ejecutan procesos en batch luego de seguir los pasos anteriores del 1 al 4 incluyendo el paso 7, podemos registrar como servicios los worker para cargar y editar los vídeos de la siguiente manera.
 
+En la ubicación MISW-4204-RepositorioBase/microservicio_cargar_video
+```bash
 pm2 start "sudo celery -A app.celery_app  worker -l info -P solo -Q upload -n worker_upload" --name upload_video
+```
+
+En la ubicación MISW-4204-RepositorioBase/microservicio_editar_video
+```bash
 pm2 start "sudo celery -A app.celery_app  worker -l info -P solo -Q edit -n worker_edit" --name edit_video
+```
+
