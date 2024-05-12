@@ -4,16 +4,18 @@ from flask import request
 # from flask_jwt_extended import jwt_required, create_access_token
 from celery import Celery
 from sqlalchemy.orm import sessionmaker
+from google.cloud import pubsub_v1
+import configparser
+import json
 
-celery_app = Celery(__name__, broker='redis://35.185.241.68:6379/0')
+config = configparser.ConfigParser()
+config.sections()
+config.read('config.ini')
 
-@celery_app.task(name='upload_video')
-def upload_video(*args):
-    pass
-
-@celery_app.task(name='edit_video')
-def edit_video(*args):
-    pass
+project_id = config['PUBSUB']['project_id']
+topic_upload_id = config['PUBSUB']['topic_upload_id']
+topic_edit_id = config['PUBSUB']['topic_edit_id']
+service_account = config['Paths']['service_account']
 
 video_schema = VideoSchema()
 Session = sessionmaker(bind=db)
@@ -38,9 +40,14 @@ class VideoComandsResource(Resource):
     
         session.add(nuevo_video)
         session.commit()
-        args = (nuevo_video.id,nuevo_video.file_name,vfile,nuevo_video.timestamp, vstatus, nuevo_video.original, nuevo_video.edited)
-        upload_video.apply_async(args=args, queue='upload')
-        edit_video.apply_async(args=args, queue='edit')
+
+        video = {}
+        video['id'] = nuevo_video.id
+        video['file_name'] = nuevo_video.file_name
+        video['file'] = vfile
+
+        publish_messages(topic_upload_id,json.dumps(video))
+        publish_messages(topic_edit_id,json.dumps(video))
         return video_schema.dump(nuevo_video), 201
     
     
@@ -65,3 +72,11 @@ class VideoComandsResource(Resource):
         session.delete(video)
         session.commit()
         return '', 204
+    
+    
+def publish_messages(topic_id: str,message) -> None:
+    publisher = pubsub_v1.PublisherClient.from_service_account_json(service_account)
+    topic_path = publisher.topic_path(project_id, topic_id)
+    future = publisher.publish(topic_path, message.encode('utf-8') )
+    print(future.result())
+    print(f"Published messages to {topic_path}.")

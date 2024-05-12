@@ -1,13 +1,16 @@
-from celery import Celery
 from modelos import db, Video, VideoSchema
 from sqlalchemy.orm import sessionmaker
 from flask import Flask,request
 import configparser
 import cv2 as cv2
-from moviepy.editor import VideoFileClip, concatenate_videoclips,CompositeVideoClip
+from moviepy.editor import VideoFileClip, CompositeVideoClip
 import base64
+import json
+
 # gcloud
 from google.cloud import storage
+from google.cloud import pubsub_v1
+from concurrent.futures import TimeoutError
 
 config = configparser.ConfigParser()
 config.sections()
@@ -18,11 +21,17 @@ file_logo_dir = config['Paths']['file_logo_dir']
 bucket_name = config['Paths']['bucket_name']
 path_file = config['Paths']['path_file']
 service_account = config['Paths']['service_account']
+
 db_user = config['credentials']['db_user']
 db_password = config['credentials']['db_password']
 db_host = config['credentials']['db_host']
 db_port = config['credentials']['db_port']
 db_database = config['credentials']['db_database']
+
+project_id = config['PUBSUB']['project_id']
+topic_upload_id = config['PUBSUB']['topic_upload_id']
+service_account_sub = config['PUBSUB']['service_account_sub']
+subscription_id = config['PUBSUB']['subscription_id']
 
 # Crear la aplicación
 def create_app(config_name):
@@ -37,32 +46,6 @@ app_context.push()
 
 Session = sessionmaker(bind=db)
 session = Session()
-
-celery_app = Celery(__name__, broker='redis://localhost:6379/0')
-@celery_app.task(name='edit_video')
-def edit_video(*args):
-    with app.app_context():
-        video_schema = VideoSchema()
-        # print(args)
-        task_video = session.query(Video).get(args[0])
-
-        if task_video is None:
-            return '', 404
-
-        file_name = args[1]
-        file_name = "edited_" + file_name
-        file_dir = file_upload_dir + "\\" + file_name
-        fh = open(file_dir, "wb")
-        fh.write(base64.b64decode(args[2]))
-        fh.close()
-
-        mergeVideoImage(file_dir)
-        upload_blob_from_memory(file_dir, file_name)
-        file_dir = "https://storage.cloud.google.com/almacenamiento_videos_e3/videos_procesados/" + file_name
-        task_video.status = "PROCESADO"
-        task_video.edited = file_dir
-        session.commit()
-        return video_schema.dump(task_video), 200
 
 def mergeVideoImage(idrl_video):
     clip_1 = VideoFileClip(file_logo_dir)
@@ -89,3 +72,49 @@ def upload_blob_from_memory(contents, destination_blob_name):
     print(
         f"{destination_blob_name} uploaded to {bucket_name}."
     )
+
+
+subscriber = pubsub_v1.SubscriberClient.from_service_account_json(service_account_sub)
+subscription_path = subscriber.subscription_path(project_id, subscription_id)
+
+def callback(message: pubsub_v1.subscriber.message.Message) -> None:
+    json_object = json.loads(message.data)
+    print(f"Received {json_object.get('file_name')!r}.")
+    video_schema = VideoSchema()
+    task_video = session.query(Video).get(json_object.get('id'))
+
+    if task_video is None:
+        return '', 404
+
+    file_name = json_object.get('file_name')
+    file = base64.b64decode(json_object.get('file'))
+    file_name = "edited_" + file_name
+    file_dir = file_upload_dir + "/" + file_name
+    fh = open(file_dir, "wb")
+    fh.write(file)
+    fh.close()
+
+    mergeVideoImage(file_dir)
+    upload_blob_from_memory(file_dir, file_name)
+    file_dir = "https://storage.cloud.google.com/almacenamiento_videos_e3/videos_procesados/" + file_name
+    task_video.status = "PROCESADO"
+    task_video.edited = file_dir
+    session.commit()
+    return video_schema.dump(task_video), 200
+
+
+streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
+print(f"Listening for messages on {subscription_path}..\n")
+
+# Wrap subscriber in a 'with' block to automatically call close() when done.
+with subscriber:
+    # When `timeout` is not set, result() will block indefinitely,
+    # unless an exception is encountered first.
+    try:
+        streaming_pull_future.result(timeout=60)
+    except Exception as e:
+        print(
+            f"Listening for messages on {subscription_path} threw an exception: {e}."
+        )
+        streaming_pull_future.cancel()  # Trigger the shutdown.
+        streaming_pull_future.result()  # Block until the shutdown is complete.
