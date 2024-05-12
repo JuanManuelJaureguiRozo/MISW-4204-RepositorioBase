@@ -29,7 +29,7 @@ db_port = config['credentials']['db_port']
 db_database = config['credentials']['db_database']
 
 project_id = config['PUBSUB']['project_id']
-topic_upload_id = config['PUBSUB']['topic_upload_id']
+topic_edit_id = config['PUBSUB']['topic_edit_id']
 service_account_sub = config['PUBSUB']['service_account_sub']
 subscription_id = config['PUBSUB']['subscription_id']
 
@@ -77,6 +77,9 @@ def upload_blob_from_memory(contents, destination_blob_name):
 subscriber = pubsub_v1.SubscriberClient.from_service_account_json(service_account_sub)
 subscription_path = subscriber.subscription_path(project_id, subscription_id)
 
+# Limit the subscriber to only have ten outstanding messages at a time.
+flow_control = pubsub_v1.types.FlowControl(max_messages=1)
+
 def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     json_object = json.loads(message.data)
     print(f"Received {json_object.get('file_name')!r}.")
@@ -100,10 +103,12 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     task_video.status = "PROCESADO"
     task_video.edited = file_dir
     session.commit()
-    return video_schema.dump(task_video), 200
+    message.ack()
+    # return video_schema.dump(task_video), 200
+    
 
 
-streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
+streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback,flow_control=flow_control)
 print(f"Listening for messages on {subscription_path}..\n")
 
 # Wrap subscriber in a 'with' block to automatically call close() when done.
@@ -111,7 +116,7 @@ with subscriber:
     # When `timeout` is not set, result() will block indefinitely,
     # unless an exception is encountered first.
     try:
-        streaming_pull_future.result(timeout=60)
+        streaming_pull_future.result()
     except Exception as e:
         print(
             f"Listening for messages on {subscription_path} threw an exception: {e}."
