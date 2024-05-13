@@ -96,3 +96,23 @@ En la ubicación MISW-4204-RepositorioBase/microservicio_editar_video
 pm2 start "sudo celery -A app.celery_app  worker -l info -P solo -Q edit -n worker_edit" --name edit_video
 ```
 
+# **Despliegue en la nube haciendo del servicio de mensajería PUBSUB**
+
+Para realizar el despliegue en la nube haciendo uso del servicio de mensajeria, se aplicó el mismo despliegue de la entrega anterior con alguna pequeñas diferencias que serán mencionadas a continuación:
+1. Instalaciónd e librerías de GCP para el uso de este servicio
+```bash
+sudo pip install google-cloud
+sudo pip install google-cloud-pubsub
+```   
+2. Luego de las modificaciones realizadas en el código fuente del proyecto, la única diferencia para subir el servicio se dió en el microservicio editarVideo, para el cual fue necesario especificar un timeout en su publicación en gunicorn paara evitar errores en el procesamiento de mensajes de edición de vídeos, adicional a que anteriormente la instrucción correspondía a el levantamiento de la cola y en este caso a la ejecución de la aplicación Flask
+```bash
+sudo pm2 start "sudo gunicorn --bind 127.0.0.1:5002 app:app --workers 1 --timeout 180" --name edit-server
+```  
+3. Persistir los servicios en sudo para que luego de detener las VM estos se levantaran de manera automatica una vez se iniciaran nuevamente.
+```bash
+sudo pm2 startup systemd
+sudo pm2 save
+sudo systemctl start pm2-root
+sudo systemctl stop pm2-root
+sudo systemctl status pm2-root
+```  
