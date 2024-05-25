@@ -116,3 +116,16 @@ sudo systemctl start pm2-root
 sudo systemctl stop pm2-root
 sudo systemctl status pm2-root
 ```  
+
+# **Despliegue en la nube haciendo uso de plataforma como servicio CLOUD RUN**
+
+Para el despliegue se realizó la modificación del código fuente de cada microservicio con el objetivo de asegurar su funcionamiento en cloud run, para el caso solo es requerido por cada microservicio ejecutar la instrucción:
+```bash
+gcloud run deploy
+```
+Es necesario tener en cuenta que nos debemos ubicar en la carpeta raíz de cada microservicio para poder ejecutar dicha instrucción, por defecto usamos los siguientes nombres:
+1. webserver
+2. uploadvideo
+3. editvideo
+
+Todos fueron desplegados en la región 37 correspondiente a us-west1 con la configuración *Permitir sin autenticación*   
