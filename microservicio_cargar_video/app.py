@@ -1,14 +1,14 @@
-from modelos import db, Video
+from modelos import db, Video, VideoSchema
 from sqlalchemy.orm import sessionmaker
-from flask import Flask
+from flask import Flask,request
+from flask_restful import Api, Resource
 import configparser
 import base64
 import json
+import os
 
 # gcloud
 from google.cloud import storage
-from google.cloud import pubsub_v1
-from concurrent.futures import TimeoutError
 
 config = configparser.ConfigParser()
 config.sections()
@@ -41,11 +41,9 @@ app = create_app('default')
 app_context = app.app_context()
 app_context.push()
 
+video_schema = VideoSchema()
 Session = sessionmaker(bind=db)
 session = Session()
-
-subscriber = pubsub_v1.SubscriberClient.from_service_account_json(service_account_sub)
-subscription_path = subscriber.subscription_path(project_id, subscription_id)
 
 def upload_blob_from_memory(contents, destination_blob_name):
     """Uploads a file to the bucket."""
@@ -60,44 +58,30 @@ def upload_blob_from_memory(contents, destination_blob_name):
         f"{destination_blob_name} uploaded to {bucket_name}."
     )
 
-def callback(message: pubsub_v1.subscriber.message.Message) -> None:
-    json_object = json.loads(message.data)
-    print(f"Received {json_object.get('file_name')!r}.")
-    video = session.query(Video).get(json_object.get('id'))
+class VideoComandsResource(Resource):
+    def post(self):
+        message = request.json['message']
+        json_data = base64.b64decode(message['data']).decode('utf-8')
+        data = json.loads(json_data)
+        # print(data)
+        id = data['id']
+        video = session.query(Video).get(id)
 
-    if video is None:
-        print(f"Error al subir video, el video no se encontró en la BD.")
-        #return '', 404
+        if video is None:
+            return '', 404
 
-    file_name = json_object.get('file_name')
-    file = base64.b64decode(json_object.get('file'))
-    upload_blob_from_memory(file, file_name)
-    file_dir = "https://storage.cloud.google.com/almacenamiento_videos_e3/videos_originales/" + file_name
+        file_name = data['file_name']
+        file = base64.b64decode(data['file'])
+        upload_blob_from_memory(file, file_name)
+        file_dir = "https://storage.cloud.google.com/almacenamiento_videos_e3/videos_originales/" + file_name
 
-    video.status = "SUBIDO"
-    video.original = file_dir
-    session.commit()
-    # return video_schema.dump(video), 200
-    if message.attributes:
-        print("Attributes:")
-        for key in message.attributes:
-            value = message.attributes.get(key)
-            print(f"{key}: {value}")
-    message.ack()
+        video.status = "SUBIDO"
+        video.original = file_dir
+        session.commit()
+        return video_schema.dump(video), 200
+    
+api = Api(app)
+api.add_resource(VideoComandsResource, '/api/tasks')
 
-
-streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
-print(f"Listening for messages on {subscription_path}..\n")
-
-# Wrap subscriber in a 'with' block to automatically call close() when done.
-with subscriber:
-    # When `timeout` is not set, result() will block indefinitely,
-    # unless an exception is encountered first.
-    try:
-        streaming_pull_future.result(timeout=60)
-    except Exception as e:
-        print(
-            f"Listening for messages on {subscription_path} threw an exception: {e}."
-        )
-        streaming_pull_future.cancel()  # Trigger the shutdown.
-        streaming_pull_future.result()  # Block until the shutdown is complete.
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

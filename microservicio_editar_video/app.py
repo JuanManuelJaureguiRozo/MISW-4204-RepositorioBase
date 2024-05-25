@@ -1,16 +1,14 @@
 from modelos import db, Video, VideoSchema
 from sqlalchemy.orm import sessionmaker
 from flask import Flask,request
+from flask_restful import Api, Resource
 import configparser
-import cv2 as cv2
 from moviepy.editor import VideoFileClip, CompositeVideoClip
-import base64
-import json
+import base64, json, tempfile
+import os
 
 # gcloud
 from google.cloud import storage
-from google.cloud import pubsub_v1
-from concurrent.futures import TimeoutError
 
 config = configparser.ConfigParser()
 config.sections()
@@ -44,12 +42,21 @@ app = create_app('default')
 app_context = app.app_context()
 app_context.push()
 
+video_schema = VideoSchema()
 Session = sessionmaker(bind=db)
 session = Session()
 
-def mergeVideoImage(idrl_video):
+def mergeVideoImage(binary_data):
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    temp_file.write(binary_data)
+    temp_file.close()
+
+    try:
+        clip_2 = VideoFileClip(temp_file.name)
+    except:
+        return None
+
     clip_1 = VideoFileClip(file_logo_dir)
-    clip_2 = VideoFileClip(idrl_video)
 
     if(clip_2.duration > 18):
         clip_2 = clip_2.subclip(0,18)
@@ -58,7 +65,11 @@ def mergeVideoImage(idrl_video):
     video = CompositeVideoClip([clip_1,
                                 clip_2.set_start(1).set_position(("center","top")),
                                 clip_3.set_start(clip_2.duration+1)], size=(1920,1080))
-    video.write_videofile(idrl_video)
+    
+    temp_file_edited = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    video.write_videofile(temp_file_edited.name)
+    temp_file_edited.close()
+    return temp_file_edited.name
 
 def upload_blob_from_memory(contents, destination_blob_name):
     """Uploads a file to the bucket."""
@@ -73,53 +84,32 @@ def upload_blob_from_memory(contents, destination_blob_name):
         f"{destination_blob_name} uploaded to {bucket_name}."
     )
 
+class VideoComandsResource(Resource):
+    def post(self):
+        message = request.json['message']
+        json_data = base64.b64decode(message['data']).decode('utf-8')
+        data = json.loads(json_data)
+        id = data['id']
+        video = session.query(Video).get(id)
 
-subscriber = pubsub_v1.SubscriberClient.from_service_account_json(service_account_sub)
-subscription_path = subscriber.subscription_path(project_id, subscription_id)
+        if video is None:
+            return '', 404
 
-# Limit the subscriber to only have ten outstanding messages at a time.
-flow_control = pubsub_v1.types.FlowControl(max_messages=1)
+        file_name = data['file_name']
+        file = base64.b64decode(data['file'])
+        file_name = "edited_" + file_name
+        file_dir = file_upload_dir + "/" + file_name
 
-def callback(message: pubsub_v1.subscriber.message.Message) -> None:
-    json_object = json.loads(message.data)
-    print(f"Received {json_object.get('file_name')!r}.")
-    video_schema = VideoSchema()
-    task_video = session.query(Video).get(json_object.get('id'))
+        temp_file_edited = mergeVideoImage(file)
+        upload_blob_from_memory(temp_file_edited, file_name)
+        file_dir = "https://storage.cloud.google.com/almacenamiento_videos_e3/videos_procesados/" + file_name
+        video.status = "PROCESADO"
+        video.edited = file_dir
+        session.commit()
+        return video_schema.dump(video), 200
 
-    if task_video is None:
-        return '', 404
+api = Api(app)
+api.add_resource(VideoComandsResource, '/api/tasks')
 
-    file_name = json_object.get('file_name')
-    file = base64.b64decode(json_object.get('file'))
-    file_name = "edited_" + file_name
-    file_dir = file_upload_dir + "/" + file_name
-    fh = open(file_dir, "wb")
-    fh.write(file)
-    fh.close()
-
-    mergeVideoImage(file_dir)
-    upload_blob_from_memory(file_dir, file_name)
-    file_dir = "https://storage.cloud.google.com/almacenamiento_videos_e3/videos_procesados/" + file_name
-    task_video.status = "PROCESADO"
-    task_video.edited = file_dir
-    session.commit()
-    message.ack()
-    # return video_schema.dump(task_video), 200
-    
-
-
-streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback,flow_control=flow_control)
-print(f"Listening for messages on {subscription_path}..\n")
-
-# Wrap subscriber in a 'with' block to automatically call close() when done.
-with subscriber:
-    # When `timeout` is not set, result() will block indefinitely,
-    # unless an exception is encountered first.
-    try:
-        streaming_pull_future.result()
-    except Exception as e:
-        print(
-            f"Listening for messages on {subscription_path} threw an exception: {e}."
-        )
-        streaming_pull_future.cancel()  # Trigger the shutdown.
-        streaming_pull_future.result()  # Block until the shutdown is complete.
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
